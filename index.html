@@ -15,20 +15,21 @@
 	<div class="container-fluid">
 		<div class="row">
 			<div class="search col-sm-3">
-				<form class="searchbar">
+				<form class="searchbar" data-bind="with:user">
 					<div class="row">
-						<input class="col-sm-3" type="submit" value="From">
-						<input class="col-sm-9" input data-bind="value: addressDetail" type="text">
+						<input class="col-sm-2" type="submit" value="From">
+						<input class="col-sm-10" data-bind="value: addressDetail" type="text">
 					</div>
 					<div class="row">
-						<input class="col-sm-3" type="submit" value="To">
-						<input class="col-sm-9" type="text" value="">
+						<input class="col-sm-2" type="submit" value="To">
+						<input class="col-sm-5" type="text" value="">
+						<input class="col-sm-5" data-bind="value: preferedPlace" type="text" placeholder="Place to visit">
 					</div>
 				</form>
 				<div class="row">
 					<div class="exist-parks col-sm">
-						<ul>
-							<li>tututu</li>
+						<ul data-bind="foreach:parkList">
+							<li data-bind="text:name,click:clickMark"></li>
 						</ul>
 					</div>
 					<div class="destiantion col-sm">tututu</div>
@@ -37,7 +38,7 @@
 			</div>
 
 			<div id="map" class="map col-sm-9">
-				Finding parks near user's position.....
+				Looking for parks near user's position.....
 			</div>
 		</div>
 	</div>
@@ -49,10 +50,10 @@
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1"
 	 crossorigin="anonymous"></script>
 	<script src='static/js/knockout-3.4.2.js'></script>
-	<script src='static/js/ko-promise.min.js'></script>
 	<script src="static/js/main.js"></script>
-	<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAN-sYyfU2psv1W8l_sRVTKJ1Pt2IpRfKk&callback=initMap&language=en">
+	<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAN-sYyfU2psv1W8l_sRVTKJ1Pt2IpRfKk&callback=initMap&language=en&libraries=places">
 	</script>
+	<!-- <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAN-sYyfU2psv1W8l_sRVTKJ1Pt2IpRfKk&libraries=places&callback=initMap&language=en"></script> -->
 
 </body>
 
