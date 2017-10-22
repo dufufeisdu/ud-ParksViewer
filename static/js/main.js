@@ -6,6 +6,7 @@ class User {
 		this.marker = new google.maps.Marker({
 			position: position,
 			map: map,
+			animation: google.maps.Animation.BOUNCE,
 			title: "You are here!"
 		});
 		this.infoWindow = new google.maps.InfoWindow({
@@ -41,16 +42,12 @@ class User {
 		this.marker.addListener('click', () => {
 			if (this.marker.getAnimation() !== null) {
 				this.marker.setAnimation(null);
+				this.infoWindow.open(map, this.marker);
 			} else {
+				this.infoWindow.close();
 				this.marker.setAnimation(google.maps.Animation.BOUNCE);
 			}
-			if (this.marker != this.infoWindow.marker) {
-				this.infoWindow.open(map, this.marker);
-			}
 		});
-
-
-
 	}
 }
 
@@ -59,9 +56,21 @@ class User {
 class Park {
 	constructor(map, parkInfo) {
 		this.name = ko.observable(parkInfo.name);
+		this.searchTxt = ko.observable("");
+		this.showMe = ko.computed(() => {
+			let str = this.searchTxt();
+			if (str === "") {
+				return true;
+			} else {
+				let reg = new RegExp(str, 'i');
+				return reg.test(parkInfo.name);
+			}
+		});
+
 		this.marker = new google.maps.Marker({
 			position: parkInfo.geometry.location,
 			map: map,
+			animation: google.maps.Animation.DROP,
 			title: "This is a park!"
 		});
 		this.infoWindow = new google.maps.InfoWindow({
@@ -71,16 +80,16 @@ class Park {
 		this.marker.addListener('click', () => {
 			if (this.marker.getAnimation() !== null) {
 				this.marker.setAnimation(null);
+				this.infoWindow.close();
 			} else {
-				this.marker.setAnimation(google.maps.Animation.BOUNCE);
-			}
-			if (this.marker != this.infoWindow.marker) {
 				this.infoWindow.open(map, this.marker);
+				this.marker.setAnimation(google.maps.Animation.BOUNCE);
 			}
 		});
 		this.clickMark = () => {
 			new google.maps.event.trigger(this.marker, 'click');
 		}
+
 	}
 }
 
@@ -90,9 +99,17 @@ class ViewModel {
 	constructor(map, user, parkArray) {
 		this.user = ko.observable(user);
 		this.parkList = ko.observableArray([]);
-		parkArray.forEach((park) => {
-			this.parkList().push(new Park(map, park));
+		this.inputText = ko.observable("");
+		this.inputText.subscribe((newValue) => {
+			this.parkList().forEach((parkObsv) => {
+				parkObsv().searchTxt(newValue);
+			})
 		});
+		parkArray.forEach((park) => {
+			let p = ko.observable(new Park(map, park));
+			this.parkList.push(p);
+		});
+
 	}
 }
 
