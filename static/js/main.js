@@ -66,7 +66,9 @@ class Park {
 				return reg.test(parkInfo.name);
 			}
 		});
-
+		this.showMe.subscribe((value) => {
+			this.marker.setVisible(value);
+		})
 		this.marker = new google.maps.Marker({
 			position: parkInfo.geometry.location,
 			map: map,
@@ -140,8 +142,10 @@ function initMap() {
 			//2 grab data of parks near the user
 			let service = new google.maps.places.PlacesService(map);
 			user.address.then((data) => {
-				console.log(data);
-				let request = { location: user.position, query: user.preferedPlace() + " near " + data[1].formatted_address }
+				let request = {
+					location: user.position,
+					query: user.preferedPlace() + " near " + data[1].formatted_address
+				}
 				service.textSearch(request, (result, status) => {
 					if (status == google.maps.places.PlacesServiceStatus.OK) {
 						let viewModel = new ViewModel(map, user, result);
