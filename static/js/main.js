@@ -2,17 +2,23 @@
 class User {
   constructor(map, position) {
     this.position = position;
+
     this.marker = new google.maps.Marker({
       position: position,
       map: map,
       animation: google.maps.Animation.BOUNCE,
       title: "You are here!"
     });
+
     this.infoWindow = new google.maps.InfoWindow({
       position: this.position
     });
+
     this.preferedPlace = ko.observable("parks");
+
     this.addressDetail = ko.observable("");
+
+    //transfer user geocode to physical address
     this.address = new Promise((reslove, reject) => {
       let geocoder = new google.maps.Geocoder;
       geocoder.geocode({ 'location': this.position },
@@ -28,21 +34,29 @@ class User {
           }
         });
     });
+
+    //grab user address and put the result into the inforWindow
     this.address.then((data) => {
+
       let fromatAddress = data[0].address_components.reduce((a, b) => {
         return a + '<br>' + b.short_name;
       }, "Current Location: ");
+
       this.infoWindow.setContent(
         `<p>${fromatAddress}</p>
 				 <img class="img-thumbnail img-fluid" style="max-width:50%; height=auto"
 					src="static/images/user_small.jpg">
-				`);
-      this.addressDetail(data[0].formatted_address);
+        `);
+
+      this.addressDetail(data[1].formatted_address);
+
     }).catch((reason) => {
       this.infoWindow.setContent(
         `<p>${reason}</p>
 				`);
     });
+
+    //add clickListener to toggle marker click
     this.marker.addListener('click', () => {
       if (this.marker.getAnimation() !== null) {
         this.marker.setAnimation(null);
@@ -65,28 +79,33 @@ class Park {
   constructor(map, parkInfo) {
     this.name = ko.observable(parkInfo.name);
     this.searchTxt = ko.observable("");
+    //handle user input, filter match result
     this.showMe = ko.computed(() => {
       let str = this.searchTxt();
       if (str === "") {
         return true;
       } else {
         let reg = new RegExp(str, 'i');
-        return reg.test(parkInfo.name);
+        return reg.test(this.name());
       }
     });
+
     this.showMe.subscribe((value) => {
       this.marker.setVisible(value);
-    })
+    });
+
     this.marker = new google.maps.Marker({
       position: parkInfo.geometry.location,
       map: map,
       animation: google.maps.Animation.DROP,
       title: "This is a park!"
     });
+
     this.infoWindow = new google.maps.InfoWindow({
       position: parkInfo.geometry.location,
       content: `<p>${this.name()}</p>`
     });
+
     this.marker.addListener('click', () => {
       if (this.marker.getAnimation() !== null) {
         this.marker.setAnimation(null);
@@ -96,9 +115,10 @@ class Park {
         this.marker.setAnimation(google.maps.Animation.BOUNCE);
       }
     });
+
     this.clickMark = () => {
       new google.maps.event.trigger(this.marker, 'click');
-    }
+    };
 
   }
 }
@@ -113,7 +133,7 @@ class ViewModel {
     this.inputText.subscribe((newValue) => {
       this.parkList().forEach((parkObsv) => {
         parkObsv().searchTxt(newValue);
-      })
+      });
     });
     parkArray.forEach((park) => {
       let p = ko.observable(new Park(map, park));
@@ -134,28 +154,32 @@ let renderMap = (data) => {
 
   //2 grab data of parks near the user
   let service = new google.maps.places.PlacesService(map);
+
+  //here use the promise of user.address again
+  //the reject was already handled in user constructor
+  //so, no catch needed.
   user.address.then((data) => {
     let request = {
       location: user.position,
       query: user.preferedPlace() + " near " + data[1].formatted_address
-    }
-    service.textSearch(request, (result, status) => {
+    };
+    service.textSearch(request, (parkInfo, status) => {
       if (status == google.maps.places.PlacesServiceStatus.OK) {
-        let viewModel = new ViewModel(map, user, result);
+        let viewModel = new ViewModel(map, user, parkInfo);
         ko.applyBindings(viewModel);
       } else {
         $('#map').html(status.message);
       }
     });
-  })
-}
+  });
+};
 
 function initMap() {
   //add #map's height property before render the map data.
   //This is the way to use bootstrap and google map.
   //Maybe there is another better way?
   //tried resize of google map,css set 100% height...
-  //but map size is the same as search div
+  //but map size is always the same as the left search box
   $('#map').css("height", window.screen.height)
 
 
@@ -180,10 +204,8 @@ function initMap() {
   } else {
     //1. browser do not support this feature
     $('#map').html(`<h1>Browser don't support the geolocation feature, use default data instead</h1>`);
-    setTimeout(function () { renderMap(defaultUserLocation) }, 1000);
+    setTimeout(function () { renderMap(defaultUserLocation) }, 1500);
   }
-
-
 
 }
 
