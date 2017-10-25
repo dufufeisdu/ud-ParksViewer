@@ -1,4 +1,10 @@
-[
+let defaultUserLocation = {
+	coords: {
+		latitude: 37.88,
+		longitude: -122.30
+	}
+};
+let defaultData = [
 	{
 		"formatted_address": "W Frontage Rd & Access Rd, Emeryville, CA 94608, United States",
 		"geometry": {
@@ -405,4 +411,4 @@
 		],
 		"html_attributions": []
 	}
-]
+];
