@@ -1,5 +1,3 @@
-//if cannot find user location, use this data instead
-
 
 class User {
   constructor(map, position) {
@@ -31,24 +29,33 @@ class User {
         });
     });
     this.address.then((data) => {
+      let fromatAddress = data[0].address_components.reduce((a, b) => {
+        return a + '<br>' + b.short_name;
+      }, "Current Location: ");
       this.infoWindow.setContent(
-        `<p>Start From ${data[1].formatted_address}</p>
+        `<p>${fromatAddress}</p>
 				 <img class="img-thumbnail img-fluid" style="max-width:50%; height=auto"
-					src="static/images/user.jpg">
+					src="static/images/user_small.jpg">
 				`);
-      this.addressDetail(data[1].formatted_address);
+      this.addressDetail(data[0].formatted_address);
     }).catch((reason) => {
-      console.log(reason);
+      this.infoWindow.setContent(
+        `<p>${reason}</p>
+				`);
     });
     this.marker.addListener('click', () => {
       if (this.marker.getAnimation() !== null) {
         this.marker.setAnimation(null);
         this.infoWindow.open(map, this.marker);
+        google.maps.event.addDomListener(window, 'resize', () => {
+          this.infoWindow.open(map, this.marker);
+        });
       } else {
         this.infoWindow.close();
         this.marker.setAnimation(google.maps.Animation.BOUNCE);
       }
     });
+
   }
 }
 
@@ -165,7 +172,7 @@ function initMap() {
         //1.3 user reject to use their location
         if (error.message === "User denied Geolocation") {
           $('#map').html(`<h1>${error.message}, use default data instead</h1>`);
-          setTimeout(function () { renderMap(defaultUserLocation) }, 1000);
+          setTimeout(function () { renderMap(defaultUserLocation) }, 1500);
         } else {
           $('#map').html(`<h1>${error.message}</h1>`);
         }
