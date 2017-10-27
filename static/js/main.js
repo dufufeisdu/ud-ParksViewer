@@ -1,3 +1,5 @@
+//all markers will be here
+let markersAndInfoWindow = [];
 
 class User {
   constructor(map, position) {
@@ -6,14 +8,15 @@ class User {
     this.marker = new google.maps.Marker({
       position: position,
       map: map,
-      animation: google.maps.Animation.BOUNCE,
+      visible: false,
+      animation: google.maps.Animation.DROP,
       title: "You are here!"
     });
 
     this.infoWindow = new google.maps.InfoWindow({
       position: this.position
     });
-
+    markersAndInfoWindow.push({ marker: this.marker, infoWindow: this.infoWindow });
     this.preferedPlace = ko.observable("parks");
 
     this.addressDetail = ko.observable("");
@@ -35,7 +38,7 @@ class User {
         });
     });
 
-    //grab user address and put the result into the inforWindow
+    //grab user address and put the result into the infoWindow
     this.address.then((data) => {
 
       let fromatAddress = data[0].address_components.reduce((a, b) => {
@@ -44,7 +47,7 @@ class User {
 
       this.infoWindow.setContent(
         `<p>${fromatAddress}</p>
-				 <img class="img-thumbnail img-fluid" style="max-width:50%; height=auto"
+				 <img class="img-thumbnail img-fluid" style="max-width:100%; height=auto"
 					src="static/images/user_small.jpg">
         `);
 
@@ -58,18 +61,24 @@ class User {
 
     //add clickListener to toggle marker click
     this.marker.addListener('click', () => {
-      if (this.marker.getAnimation() !== null) {
-        this.marker.setAnimation(null);
+      //close all before handle this marker click
+      markersAndInfoWindow.forEach((m) => {
+        m.marker.setAnimation(null);
+        let inforWindowPointMap = m.infoWindow.getMap();
+        //check if the inforWindow is closed or not
+        if (inforWindowPointMap !== null && typeof inforWindowPointMap !== "undefined") {
+          m.infoWindow.close();
+        }
+      });
+      this.marker.setAnimation(google.maps.Animation.BOUNCE);
+      this.infoWindow.open(map, this.marker);
+      google.maps.event.addDomListener(window, 'resize', () => {
         this.infoWindow.open(map, this.marker);
-        google.maps.event.addDomListener(window, 'resize', () => {
-          this.infoWindow.open(map, this.marker);
-        });
-      } else {
-        this.infoWindow.close();
-        this.marker.setAnimation(google.maps.Animation.BOUNCE);
-      }
+      });
     });
-
+    //Just for meet the spec
+    //may add find route function in future, so still need this marker
+    // this.marker.setVisible = true;
   }
 }
 
@@ -100,20 +109,26 @@ class Park {
       animation: google.maps.Animation.DROP,
       title: "This is a park!"
     });
-
     this.infoWindow = new google.maps.InfoWindow({
       position: parkInfo.geometry.location,
       content: `<p>${this.name()}</p>`
     });
-
+    markersAndInfoWindow.push({ marker: this.marker, infoWindow: this.infoWindow });
     this.marker.addListener('click', () => {
-      if (this.marker.getAnimation() !== null) {
-        this.marker.setAnimation(null);
-        this.infoWindow.close();
-      } else {
+      //close all before handle this marker click
+      markersAndInfoWindow.forEach((m) => {
+        m.marker.setAnimation(null);
+        let inforWindowPointMap = m.infoWindow.getMap();
+        //check if the inforWindow is closed or not
+        if (inforWindowPointMap !== null && typeof inforWindowPointMap !== "undefined") {
+          m.infoWindow.close();
+        }
+      });
+      this.marker.setAnimation(google.maps.Animation.BOUNCE);
+      this.infoWindow.open(map, this.marker);
+      google.maps.event.addDomListener(window, 'resize', () => {
         this.infoWindow.open(map, this.marker);
-        this.marker.setAnimation(google.maps.Animation.BOUNCE);
-      }
+      });
     });
 
     this.clickMark = () => {
@@ -131,6 +146,12 @@ class ViewModel {
     this.parkList = ko.observableArray([]);
     this.inputText = ko.observable("");
     this.inputText.subscribe((newValue) => {
+      if (newValue !== "") {
+        this.user().marker.setVisible = false;
+      } else {
+        this.user().marker.setVisible = true;
+      }
+
       this.parkList().forEach((parkObsv) => {
         parkObsv().searchTxt(newValue);
       });
