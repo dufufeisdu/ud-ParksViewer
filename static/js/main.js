@@ -192,8 +192,11 @@ let renderMap = (geodata) => {
         let viewModel = new ViewModel(map, user, responseData.response.groups[0].items);
         ko.applyBindings(viewModel);
       } else {
-        $('#map').html('Can not grab data from the vender, please check your network');
+        $('#map').html('Can not grab data from the vender');
       }
+    },
+    error: function (e) {
+      $('#map').html('<h1>Can not grab data from the vender,please check your network</h1>');
     }
   });
 };
@@ -223,7 +226,7 @@ function initMap() {
           $('#map').html(`<h1>${error.message}, use default data instead</h1>`);
           setTimeout(function () { renderMap(defaultUserLocation) }, 1500);
         } else {
-          $('#map').html(`<h1>${error.message}</h1>`);
+          $('#map').html('<h1>Can not grab data from the vender,please check your network</h1>');
         }
       });
   } else {
