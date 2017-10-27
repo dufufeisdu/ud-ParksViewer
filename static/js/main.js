@@ -38,6 +38,7 @@ class User {
         });
     });
 
+
     //grab user address and put the result into the infoWindow
     this.address.then((data) => {
 
@@ -48,7 +49,7 @@ class User {
       this.infoWindow.setContent(
         `<p>${fromatAddress}</p>
 				 <img class="img-thumbnail img-fluid" style="max-width:100%; height=auto"
-					src="static/images/user_small.jpg">
+					src="static/images/user.jpg">
         `);
 
       this.addressDetail(data[1].formatted_address);
@@ -76,7 +77,7 @@ class User {
         this.infoWindow.open(map, this.marker);
       });
     });
-    //Just for meet the spec
+    //Just for meeting the spec
     //may add find route function in future, so still need this marker
     // this.marker.setVisible = true;
   }
@@ -86,7 +87,11 @@ class User {
 
 class Park {
   constructor(map, parkInfo) {
-    this.name = ko.observable(parkInfo.name);
+    this.name = ko.observable(parkInfo.venue.name);
+    this.latlng = new google.maps.LatLng({
+      lat: parkInfo.venue.location.lat,
+      lng: parkInfo.venue.location.lng
+    });
     this.searchTxt = ko.observable("");
     //handle user input, filter match result
     this.showMe = ko.computed(() => {
@@ -104,13 +109,13 @@ class Park {
     });
 
     this.marker = new google.maps.Marker({
-      position: parkInfo.geometry.location,
+      position: this.latlng,
       map: map,
       animation: google.maps.Animation.DROP,
       title: "This is a park!"
     });
     this.infoWindow = new google.maps.InfoWindow({
-      position: parkInfo.geometry.location,
+      position: this.latlng,
       content: `<p>${this.name()}</p>`
     });
     markersAndInfoWindow.push({ marker: this.marker, infoWindow: this.infoWindow });
@@ -119,18 +124,17 @@ class Park {
       markersAndInfoWindow.forEach((m) => {
         m.marker.setAnimation(null);
         let inforWindowPointMap = m.infoWindow.getMap();
-        //check if the inforWindow is closed or not
+        //check if the inforWindow is open or not
         if (inforWindowPointMap !== null && typeof inforWindowPointMap !== "undefined") {
           m.infoWindow.close();
         }
       });
       this.marker.setAnimation(google.maps.Animation.BOUNCE);
       this.infoWindow.open(map, this.marker);
-      google.maps.event.addDomListener(window, 'resize', () => {
-        this.infoWindow.open(map, this.marker);
-      });
     });
-
+    google.maps.event.addDomListener(window, 'resize', () => {
+      this.infoWindow.open(map, this.marker);
+    });
     this.clickMark = () => {
       new google.maps.event.trigger(this.marker, 'click');
     };
@@ -146,11 +150,6 @@ class ViewModel {
     this.parkList = ko.observableArray([]);
     this.inputText = ko.observable("");
     this.inputText.subscribe((newValue) => {
-      if (newValue !== "") {
-        this.user().marker.setVisible = false;
-      } else {
-        this.user().marker.setVisible = true;
-      }
 
       this.parkList().forEach((parkObsv) => {
         parkObsv().searchTxt(newValue);
@@ -164,9 +163,9 @@ class ViewModel {
   }
 }
 
-let renderMap = (data) => {
+let renderMap = (geodata) => {
 
-  let position = new google.maps.LatLng(data.coords.latitude, data.coords.longitude);
+  let position = new google.maps.LatLng(geodata.coords.latitude, geodata.coords.longitude);
   let map = new google.maps.Map(document.getElementById('map'), {
     center: position,
     zoom: 13
@@ -174,24 +173,28 @@ let renderMap = (data) => {
   let user = new User(map, position);
 
   //2 grab data of parks near the user
-  let service = new google.maps.places.PlacesService(map);
+  //"https://api.foursquare.com/v2/venues/search?offset=0&limit=50&query=park&ll=37.88,-122.30&radius=40233.60&client_id=JYUMETWMY3XOGHUUK5XCGY3UKDUWUN1TSDIN0AXJF4JNL5AZ&client_secret=ENRZ2VIQLEUWAE14GHYVJ1HECUQ42QZPABXJ5JCXLS44WBQM&v=20171011",
+  //use foursquare API get the parks location
+  let url = 'https://api.foursquare.com/v2/venues/explore?offset=0&limit=50&query=' +
+    user.preferedPlace() + '&ll=' + geodata.coords.latitude + ',' + geodata.coords.longitude +
+    '&radius=3000&client_id=JYUMETWMY3XOGHUUK5XCGY3UKDUWUN1TSDIN0AXJF4JNL5AZ' +
+    '&client_secret=ENRZ2VIQLEUWAE14GHYVJ1HECUQ42QZPABXJ5JCXLS44WBQM&v=20171011';
 
-  //here use the promise of user.address again
-  //the reject was already handled in user constructor
-  //so, no catch needed.
-  user.address.then((data) => {
-    let request = {
-      location: user.position,
-      query: user.preferedPlace() + " near " + data[1].formatted_address
-    };
-    service.textSearch(request, (parkInfo, status) => {
-      if (status == google.maps.places.PlacesServiceStatus.OK) {
-        let viewModel = new ViewModel(map, user, parkInfo);
+  $.ajax({
+    url: url,
+    jsonp: "callback",
+    dataType: "jsonp",
+    data: {
+      format: "json"
+    },
+    success: function (responseData) {
+      if (responseData.meta.code == 200) {
+        let viewModel = new ViewModel(map, user, responseData.response.groups[0].items);
         ko.applyBindings(viewModel);
       } else {
-        $('#map').html(status.message);
+        $('#map').html('Can not grab data from the vender, please check your network');
       }
-    });
+    }
   });
 };
 
@@ -210,6 +213,7 @@ function initMap() {
     nav = new Promise((success, error) => {
       navigator.geolocation.getCurrentPosition(success, error);
     });
+    //todo:fix no network error when use default data
     nav.then(renderMap)
       .catch((error) => {
         //1.1 network disconnect
