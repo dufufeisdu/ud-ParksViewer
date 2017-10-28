@@ -116,7 +116,10 @@ class Park {
     });
     this.infoWindow = new google.maps.InfoWindow({
       position: this.latlng,
-      content: `<p>${this.name()}</p>`
+      content: `<h5>${this.name()}</h5>
+      <p>Location: ${parkInfo.venue.location.formattedAddress[0]}</p>
+      <p>FoursqureRating:${parkInfo.venue.rating || "NoData"}</p>
+      `
     });
     markersAndInfoWindow.push({ marker: this.marker, infoWindow: this.infoWindow });
     this.marker.addListener('click', () => {
@@ -133,6 +136,14 @@ class Park {
       this.infoWindow.open(map, this.marker);
     });
     google.maps.event.addDomListener(window, 'resize', () => {
+      markersAndInfoWindow.forEach((m) => {
+        m.marker.setAnimation(null);
+        let inforWindowPointMap = m.infoWindow.getMap();
+        //check if the inforWindow is open or not
+        if (inforWindowPointMap !== null && typeof inforWindowPointMap !== "undefined") {
+          m.infoWindow.close();
+        }
+      });
       this.infoWindow.open(map, this.marker);
     });
     this.clickMark = () => {
@@ -173,7 +184,6 @@ let renderMap = (geodata) => {
   let user = new User(map, position);
 
   //2 grab data of parks near the user
-  //"https://api.foursquare.com/v2/venues/search?offset=0&limit=50&query=park&ll=37.88,-122.30&radius=40233.60&client_id=JYUMETWMY3XOGHUUK5XCGY3UKDUWUN1TSDIN0AXJF4JNL5AZ&client_secret=ENRZ2VIQLEUWAE14GHYVJ1HECUQ42QZPABXJ5JCXLS44WBQM&v=20171011",
   //use foursquare API get the parks location
   let url = 'https://api.foursquare.com/v2/venues/explore?offset=0&limit=50&query=' +
     user.preferedPlace() + '&ll=' + geodata.coords.latitude + ',' + geodata.coords.longitude +
@@ -188,11 +198,13 @@ let renderMap = (geodata) => {
       format: "json"
     },
     success: function (responseData) {
+      console.log(responseData);
       if (responseData.meta.code == 200) {
         let viewModel = new ViewModel(map, user, responseData.response.groups[0].items);
         ko.applyBindings(viewModel);
       } else {
         $('#map').html('Can not grab data from the vender');
+
       }
     },
     error: function (e) {
@@ -236,4 +248,6 @@ function initMap() {
   }
 
 }
-
+function handleMapError() {
+  $('#map').html(`<h1>Unable to connect to google map</h1>`)
+}
